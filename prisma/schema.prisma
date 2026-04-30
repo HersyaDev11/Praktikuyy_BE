@@ -1,0 +1,159 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  DOSEN
+  MAHASISWA
+}
+
+model User {
+  id            String    @id @default(uuid())
+  username      String    @unique
+  password      String
+  name          String
+  role          Role
+  walletAddress String?   @unique // For blockchain integration
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  kelasDibuat   Kelas[]   @relation("AdminKelas")
+  kelasDiajar   Kelas[]   @relation("DosenKelas")
+  pendaftaran   Pendaftaran[]
+  pembayaran    Pembayaran[]
+  modul         Modul[]
+  tugasDibuat   Tugas[]
+  pengumpulan   PengumpulanTugas[]
+  nilai         Nilai[]
+  sertifikat    Sertifikat[]
+}
+
+model Kelas {
+  id          String    @id @default(uuid())
+  nama        String
+  deskripsi   String?
+  adminId     String
+  admin       User      @relation("AdminKelas", fields: [adminId], references: [id])
+  dosenId     String
+  dosen       User      @relation("DosenKelas", fields: [dosenId], references: [id])
+  harga       Float     @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  jadwal      Jadwal[]
+  peserta     Pendaftaran[]
+  tugas       Tugas[]
+  sertifikat  Sertifikat[]
+}
+
+model Pendaftaran {
+  id          String    @id @default(uuid())
+  mahasiswaId String
+  mahasiswa   User      @relation(fields: [mahasiswaId], references: [id])
+  kelasId     String
+  kelas       Kelas     @relation(fields: [kelasId], references: [id])
+  status      String    @default("ACTIVE") // ACTIVE, COMPLETED, dll
+  createdAt   DateTime  @default(now())
+}
+
+model Pembayaran {
+  id            String    @id @default(uuid())
+  mahasiswaId   String
+  mahasiswa     User      @relation(fields: [mahasiswaId], references: [id])
+  jumlah        Float
+  status        String    @default("PENDING") // PENDING, SUCCESS, FAILED
+  metode        String    // misal "TRANSFER_BANK", "CRYPTO"
+  buktiUrl      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Modul {
+  id          String    @id @default(uuid())
+  judul       String
+  konten      String
+  fileUrl     String?
+  dosenId     String
+  dosen       User      @relation(fields: [dosenId], references: [id])
+  jadwalId    String?
+  jadwal      Jadwal?   @relation(fields: [jadwalId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Jadwal {
+  id          String    @id @default(uuid())
+  judul       String
+  waktuMulai  DateTime
+  waktuSelesai DateTime
+  kelasId     String
+  kelas       Kelas     @relation(fields: [kelasId], references: [id])
+  modul       Modul[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Tugas {
+  id          String    @id @default(uuid())
+  judul       String
+  deskripsi   String
+  deadline    DateTime
+  kelasId     String
+  kelas       Kelas     @relation(fields: [kelasId], references: [id])
+  dosenId     String
+  dosen       User      @relation(fields: [dosenId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  pengumpulan PengumpulanTugas[]
+}
+
+model PengumpulanTugas {
+  id          String    @id @default(uuid())
+  tugasId     String
+  tugas       Tugas     @relation(fields: [tugasId], references: [id])
+  mahasiswaId String
+  mahasiswa   User      @relation(fields: [mahasiswaId], references: [id])
+  fileUrl     String
+  dikumpulPada DateTime @default(now())
+  nilai       Nilai?
+}
+
+model Nilai {
+  id              String    @id @default(uuid())
+  pengumpulanId   String    @unique
+  pengumpulan     PengumpulanTugas @relation(fields: [pengumpulanId], references: [id])
+  dosenId         String
+  dosen           User      @relation(fields: [dosenId], references: [id])
+  nilai           Float
+  komentar        String?
+  txHash          String?   // Transaction Hash on Blockchain
+  createdAt       DateTime  @default(now())
+}
+
+model Sertifikat {
+  id            String    @id @default(uuid())
+  mahasiswaId   String
+  mahasiswa     User      @relation(fields: [mahasiswaId], references: [id])
+  kelasId       String
+  kelas         Kelas     @relation(fields: [kelasId], references: [id])
+  fileUrl       String
+  tokenId       String?   // NFT Token ID
+  txHash        String?   // Transaction Hash for minting NFT
+  diterbitkanPada DateTime @default(now())
+}
+
