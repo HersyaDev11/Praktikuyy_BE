@@ -7,31 +7,6 @@ const router = express.Router();
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'praktikuy_super_secret_key';
 
-// Register User
-router.post('/register', async (req, res) => {
-  try {
-    const { username, password, name, role, walletAddress } = req.body;
-
-    const existingUser = await prisma.user.findUnique({ where: { username } });
-    if (existingUser) return res.status(400).json({ error: 'Username already exists' });
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await prisma.user.create({
-      data: {
-        username,
-        password: hashedPassword,
-        name,
-        role: role || 'MAHASISWA',
-        walletAddress,
-      },
-    });
-
-    res.status(201).json({ message: 'User created successfully', userId: user.id });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 
 // Login User
 router.post('/login', async (req, res) => {

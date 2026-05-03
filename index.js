@@ -4,7 +4,9 @@ import dotenv from 'dotenv';
 import authRoutes from './src/routes/auth.js';
 import sertifikatRoutes from './src/routes/sertifikat.js';
 import nilaiRoutes from './src/routes/nilai.js';
-// TODO: import other routes (kelas, jadwal, tugas, dll)
+import jadwalRoutes from './src/routes/jadwal.js';
+
+// TODO: import other routes (kelas, tugas, dll)
 
 dotenv.config();
 
@@ -23,6 +25,8 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/sertifikat', sertifikatRoutes);
 app.use('/api/nilai', nilaiRoutes);
+app.use('/api/jadwal', jadwalRoutes);
+
 
 // Error handling middleware
 app.use((err, req, res, next) => {
