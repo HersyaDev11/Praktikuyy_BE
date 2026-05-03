@@ -1,12 +1,9 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import authRoutes from './src/routes/auth.js';
 import sertifikatRoutes from './src/routes/sertifikat.js';
 import nilaiRoutes from './src/routes/nilai.js';
-// TODO: import other routes (kelas, jadwal, tugas, dll)
-
-dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
