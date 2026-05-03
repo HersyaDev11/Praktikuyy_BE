@@ -1,10 +1,13 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import pkg from '@prisma/client';
+const { PrismaClient } = pkg;
 import { ethers } from 'ethers';
-import GradesArtifact from '../../artifacts/contracts/PraktikuyGrades.sol/PraktikuyGrades.json' assert { type: "json" };
+import GradesArtifact from '../../artifacts/contracts/PraktikuyGrades.sol/PraktikuyGrades.json' with { type: "json" };
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  accelerateUrl: process.env.DATABASE_URL
+});
 
 const PROVIDER_URL = process.env.PROVIDER_URL || "http://127.0.0.1:8545";
 const PRIVATE_KEY = process.env.PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
