@@ -38,7 +38,6 @@ router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
      
-    
     if (!email || !password) {
       return res.status(400).json({ error: 'Email dan password wajib diisi' });
     }
@@ -88,6 +87,39 @@ router.post('/login', loginLimiter, async (req, res) => {
       }
     });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/logout', async (req, res) => {
+  try{
+    const {error} = await supabase.auth.signOut();
+   if(error)return res.status(400).json({ error: error.message });
+   res.json({ message: 'Logout berhasil' });
+  }catch(error){
+    res.status(500).json({error: error.message});
+  }
+})
+
+router.post('/refresh', async (req, res) => {
+  try {
+    const { refresh_token } = req.body;
+    if (!refresh_token) {
+      return res.status(400).json({ error: 'Refresh token wajib diisi' });
+    }
+    const { data, error } = await supabase.auth.refreshSession({ refresh_token });
+    if (error) return res.status(401).json({ error: error.message });
+    const userProfile = await prisma.user.findUnique({
+      where: { email: data.user.email },
+    });
+    if (!userProfile) return res.status(404).json({ error: 'User tidak ditemukan' });
+    const token = jwt.sign(
+      { id: userProfile.id, email: userProfile.email, role: userProfile.role },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+    res.json({ message: 'Token diperbarui', token, refresh_token: data.session.refresh_token });
+    } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
