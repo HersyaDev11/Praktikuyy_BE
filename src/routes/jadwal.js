@@ -1,39 +1,10 @@
 import express from 'express';
-import jwt from 'jsonwebtoken';
+import { authenticate, permit } from '../middleware/auth.js';
 import { PrismaClient } from '@prisma/client';
-
 const router = express.Router();
 const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'praktikuy_super_secret_key';
 
-const authenticate = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Token required' });
-  }
-
-  const token = authHeader.split(' ')[1];
-  try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    req.user = payload;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-};
-
-const permit = (...allowedRoles) => {
-  return (req, res, next) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-    next();
-  };
-};
-
-router.use(authenticate);
-
-router.get('/', async (req, res) => {
+router.get('/', authenticate, permit('ADMIN', 'DOSEN', 'MAHASISWA'), async (req, res) => {
   try {
     const jadwal = await prisma.jadwal.findMany({
       include: {
@@ -47,7 +18,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticate, permit('ADMIN', 'DOSEN', 'MAHASISWA'), async (req, res) => {
   try {
     const { id } = req.params;
     const jadwal = await prisma.jadwal.findUnique({
@@ -68,7 +39,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', permit('ADMIN', 'DOSEN'), async (req, res) => {
+router.post('/', authenticate, permit('ADMIN', 'DOSEN'), async (req, res) => {
   try {
     const { judul, waktuMulai, waktuSelesai, kelasId } = req.body;
   if (!judul || !waktuMulai || !waktuSelesai || !kelasId) {
@@ -88,7 +59,7 @@ router.post('/', permit('ADMIN', 'DOSEN'), async (req, res) => {
   }
 });
 
-router.put('/:id', permit('ADMIN', 'DOSEN'), async (req, res) => {
+router.put('/:id', authenticate, permit('ADMIN', 'DOSEN'), async (req, res) => {
   try {
     const { id } = req.params;
     const { judul, waktuMulai, waktuSelesai, kelasId } = req.body;
@@ -110,7 +81,7 @@ router.put('/:id', permit('ADMIN', 'DOSEN'), async (req, res) => {
   }
 });
 
-router.delete('/:id', permit('ADMIN', 'DOSEN'), async (req, res) => {
+router.delete('/:id', authenticate, permit('ADMIN', 'DOSEN'), async (req, res) => {
   try {
     const { id } = req.params;
     const deletedJadwal = await prisma.jadwal.delete({

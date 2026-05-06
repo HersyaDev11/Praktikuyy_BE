@@ -3,6 +3,7 @@ import pkg from '@prisma/client';
 const { PrismaClient } = pkg;
 import { ethers } from 'ethers';
 import GradesArtifact from '../../artifacts/contracts/PraktikuyGrades.sol/PraktikuyGrades.json' with { type: "json" };
+import { authenticate, permit } from '../middleware/auth.js';
 
 const router = express.Router();
 const prisma = new PrismaClient({
@@ -13,7 +14,7 @@ const PROVIDER_URL = process.env.PROVIDER_URL || "http://127.0.0.1:8545";
 const PRIVATE_KEY = process.env.PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 const GRADES_CONTRACT_ADDRESS = process.env.GRADES_CONTRACT_ADDRESS;
 
-router.post('/', async (req, res) => {
+router.post('/', authenticate, permit('DOSEN'), async (req, res) => {
   try {
     const { pengumpulanId, dosenId, score, komentar } = req.body;
     const pengumpulan = await prisma.pengumpulanTugas.findUnique({

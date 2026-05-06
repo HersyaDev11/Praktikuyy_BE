@@ -1,5 +1,7 @@
 import express from 'express';
 import pkg from '@prisma/client';
+import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 const { PrismaClient } = pkg;
 import { createClient } from '@supabase/supabase-js';
 
@@ -7,6 +9,12 @@ const router = express.Router();
 const prisma = new PrismaClient({
   accelerateUrl: process.env.DATABASE_URL
 });
+const JWT_SECRET = process.env.JWT_SECRET;
+if(!JWT_SECRET){
+  console.warn('Fatal: jwt belum di set di .env');
+  process.exit(1);
+}
+
 
 // Initialize Supabase Client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -18,49 +26,22 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
-<<<<<<< HEAD
-=======
-// Register User
-router.post('/register', async (req, res) => {
-  try {
-    const { email, password, name, role, walletAddress } = req.body;
-
-    // 1. Sign up with Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (authError) {
-      return res.status(400).json({ error: authError.message });
-    }
-
-    if (!authData.user) {
-      return res.status(400).json({ error: 'Failed to create user in Supabase' });
-    }
-
-    // 2. Save user profile to Prisma database with the same ID
-    const user = await prisma.user.create({
-      data: {
-        id: authData.user.id, // Link Prisma User to Supabase Auth User
-        email,
-        name,
-        role: role || 'MAHASISWA',
-        walletAddress,
-      },
-    });
-
-    res.status(201).json({ message: 'User created successfully', userId: user.id });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
->>>>>>> a173347972112c4d59016bf32436ea4d12a32876
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: {error: "Terlalu banyak percobaan login coba lagi dalam 15 menit"}
+})
 
 // Login User
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
+ 
   try {
     const { email, password } = req.body;
+     
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email dan password wajib diisi' });
+    }
 
     // 1. Authenticate with Supabase
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -81,9 +62,23 @@ router.post('/login', async (req, res) => {
       return res.status(404).json({ error: 'User profile not found in database' });
     }
 
+    if (!authData.session) {
+      return res.status(401).json({ error: 'Login failed: no session created' });
+    }
+
+    const token = jwt.sign(
+      {
+        id: userProfile.id,
+        email: userProfile.email,
+        role: userProfile.role,
+      },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
     res.json({
       message: 'Login successful',
-      token: authData.session.access_token, // JWT from Supabase
+      token,
       refresh_token: authData.session.refresh_token,
       role: userProfile.role,
       user: {
